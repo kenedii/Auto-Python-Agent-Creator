@@ -95,4 +95,4 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
 
 if __name__ == "__main__":
     provider = "openai"  # or "ollama"
-    main(provider=provider, agent_keys=["product_designer", "software_engineer"])
+    main(provider=provider, agent_keys=["product_designer","software_engineer"])

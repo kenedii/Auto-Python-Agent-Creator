@@ -56,7 +56,7 @@ def process_agent_commands(assistant_message, sandbox_dir):
         file_path = match.group(1).strip()
         try:
             full_path = os.path.join(sandbox_dir, file_path)
-            output, error = execute_code(full_path)
+            output, error = execute_code(full_path, sandbox_dir)  # Pass sandbox_dir
             if output:
                 print(f"[OUTPUT]\n{output}")
             if error:
