@@ -17,7 +17,6 @@ def main(provider="ollama"):
     sandbox_dir = create_sandbox()
     print(f"[INFO] Using sandbox directory: {sandbox_dir}")
 
-
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_initial_prompt}
@@ -32,7 +31,10 @@ def main(provider="ollama"):
     assistant_message = chat_data["choices"][0]["message"]
     messages.append(assistant_message)
     print(f"Agent: {assistant_message['content']}")
-    process_agent_commands(assistant_message, sandbox_dir)
+    execution_results = process_agent_commands(assistant_message, sandbox_dir)
+    if execution_results:
+        execution_summary = "Execution results:\n" + "\n".join(execution_results)
+        messages.append({"role": "system", "content": execution_summary})
 
     print("\nAgent is now online. Type 'exit' to quit.\n")
 
@@ -49,7 +51,10 @@ def main(provider="ollama"):
                 assistant_message = chat_data["choices"][0]["message"]
                 messages.append(assistant_message)
                 print(f"Agent: {assistant_message['content']}")
-                process_agent_commands(assistant_message, sandbox_dir)
+                execution_results = process_agent_commands(assistant_message, sandbox_dir)
+                if execution_results:
+                    execution_summary = "Execution results:\n" + "\n".join(execution_results)
+                    messages.append({"role": "system", "content": execution_summary})
             else:
                 print("[ERROR] Failed to get response from agent.")
         except EOFError:
@@ -63,6 +68,5 @@ def main(provider="ollama"):
             continue
 
 if __name__ == "__main__":
-    # Set the provider here directly when calling main()
-    provider = "openai"   # or "openai"
+    provider = "openai"  # or "ollama"
     main(provider=provider)
