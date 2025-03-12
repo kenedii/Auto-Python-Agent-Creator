@@ -71,28 +71,32 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
     if final_output is None:
         return
 
-    # Interactive loop with the last agent
+    # Start interactive post-development session with the last agent
     last_agent = agents[-1]
-    print(f"\n{last_agent.key.replace('_', ' ').title()} is now online. Type 'exit' to quit.\n")
+    print(f"\n{last_agent.key.replace('_', ' ').title()} has completed the initial development.")
+    print("You can now request additional features or modifications.")
+    print("The agent may ask for more information if needed.\n")
+
     while True:
-        try:
-            user_input = input("You: ").strip()
-            if user_input.lower() == "exit":
-                print("Ending chat. Goodbye!")
-                break
-            response = process_agent_interaction(last_agent, user_input)
-            if response is None:
-                continue
-        except EOFError:
-            print("\n[ERROR] Input interrupted. Exiting gracefully.")
+        # Prompt user for a request
+        user_input = input("Your request (or 'exit' to quit): ").strip()
+        if user_input.lower() == "exit":
+            print("Ending chat. Goodbye!")
             break
-        except KeyboardInterrupt:
-            print("\nEnding chat. Goodbye!")
-            break
-        except Exception as e:
-            print(f"[ERROR] An unexpected error occurred: {e}")
+
+        # Process the request, which may involve multiple interactions if <rinf> is used
+        response = process_agent_interaction(last_agent, user_input)
+        if response is None:
+            print("\nRequest aborted or failed. You can try again.")
             continue
 
+        # After a complete response, ask if the user wants more
+        continue_chat = input("Did you want anything else? (yes/no): ").strip().lower()
+        if continue_chat != "yes":
+            print("Ending chat. Goodbye!")
+            break
+
 if __name__ == "__main__":
-    provider = "openai"  # or "ollama"
-    main(provider=provider, agent_keys=["product_designer","software_engineer"])
+    provider = "openai"  # or "ollama" "anthropic" "huggingface"
+    # Run the main function with the specified provider and agent keys
+    main(provider=provider, agent_keys=["product_designer", "software_engineer"])
