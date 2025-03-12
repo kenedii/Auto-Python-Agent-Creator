@@ -1,7 +1,8 @@
 # agents.py
+import re
 from system_prompt import PROMPTS
-from agent import send_agent_message
-from file_manager import process_agent_commands
+from agent import send_agent_message  # Placeholder for sending messages to the model
+from file_manager import process_agent_commands  # Placeholder for command processing
 
 class Agent:
     def __init__(self, key, provider="ollama", sandbox_dir=None):
