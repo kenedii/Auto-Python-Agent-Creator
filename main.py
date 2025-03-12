@@ -1,12 +1,25 @@
+# main.py
 import os
-from agent import send_agent_message
-from file_manager import create_sandbox, process_agent_commands
-from system_prompt import SYSTEM_PROMPT
+from agents import Agent
+from file_manager import create_sandbox
 
 # Force Ollama to use CPU mode if chosen (optional)
 os.environ["OLLAMA_USE_GPU"] = "0"
 
-def main(provider="ollama"):
+def chain_agents(agents, initial_input):
+    """Process input through a chain of agents, passing each response to the next."""
+    current_input = initial_input
+    for agent in agents:
+        response = agent.process_input(current_input)
+        if response:
+            print(f"{agent.key.capitalize()} Agent: {response}")
+            current_input = response
+        else:
+            print(f"[{agent.key.upper()} ERROR] Agent failed to respond.")
+            return None
+    return current_input
+
+def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]):
     print("Please describe what you want to build:")
     user_initial_prompt = input().strip()
 
@@ -17,26 +30,14 @@ def main(provider="ollama"):
     sandbox_dir = create_sandbox()
     print(f"[INFO] Using sandbox directory: {sandbox_dir}")
 
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_initial_prompt}
-    ]
+    # Create agents with specified keys, sharing the same sandbox
+    agents = [Agent(key, provider=provider, sandbox_dir=sandbox_dir) for key in agent_keys]
 
-    print("Connecting to agent...")
-    chat_data = send_agent_message(messages, provider=provider)
-    if chat_data is None:
-        print("[ERROR] Failed to start chat with the agent.")
-        return
+    # Process initial prompt through the chain
+    print("\nConnecting to agents...")
+    chain_agents(agents, user_initial_prompt)
 
-    assistant_message = chat_data["choices"][0]["message"]
-    messages.append(assistant_message)
-    print(f"Agent: {assistant_message['content']}")
-    execution_results = process_agent_commands(assistant_message, sandbox_dir)
-    if execution_results:
-        execution_summary = "Execution results:\n" + "\n".join(execution_results)
-        messages.append({"role": "system", "content": execution_summary})
-
-    print("\nAgent is now online. Type 'exit' to quit.\n")
+    print("\nAgents are now online. Type 'exit' to quit.\n")
 
     while True:
         try:
@@ -45,18 +46,8 @@ def main(provider="ollama"):
                 print("Ending chat. Goodbye!")
                 break
 
-            messages.append({"role": "user", "content": user_input})
-            chat_data = send_agent_message(messages, provider=provider)
-            if chat_data:
-                assistant_message = chat_data["choices"][0]["message"]
-                messages.append(assistant_message)
-                print(f"Agent: {assistant_message['content']}")
-                execution_results = process_agent_commands(assistant_message, sandbox_dir)
-                if execution_results:
-                    execution_summary = "Execution results:\n" + "\n".join(execution_results)
-                    messages.append({"role": "system", "content": execution_summary})
-            else:
-                print("[ERROR] Failed to get response from agent.")
+            # Process each user input through the chain
+            chain_agents(agents, user_input)
         except EOFError:
             print("\n[ERROR] Input interrupted. Exiting gracefully.")
             break
@@ -69,4 +60,5 @@ def main(provider="ollama"):
 
 if __name__ == "__main__":
     provider = "openai"  # or "ollama"
-    main(provider=provider)
+    agent_keys = ["product_designer", "software_engineer"]
+    main(provider=provider, agent_keys=agent_keys)
