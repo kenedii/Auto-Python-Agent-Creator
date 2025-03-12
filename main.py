@@ -1,38 +1,52 @@
 # main.py
 import os
 import re
-from agents import Agent
-from file_manager import create_sandbox, process_agent_commands
-from file_manager import process_agent_commands
-from agent import send_agent_message
-from system_prompt import PROMPTS
+from agents import ProductDesignerAgent, SoftwareEngineerAgent
+from file_manager import create_sandbox
+
+# Map agent keys to their classes
+AGENT_CLASSES = {
+    "product_designer": ProductDesignerAgent,
+    "software_engineer": SoftwareEngineerAgent
+}
 
 # Force Ollama to use CPU mode if chosen (optional)
 os.environ["OLLAMA_USE_GPU"] = "0"
 
-def interact_with_product_designer(agent, initial_input):
-    """Interact with the product designer until the response contains no <rinf> tag."""
+def process_agent_interaction(agent, initial_input):
+    """Process interaction with an agent, handling <rinf> if present."""
     current_input = initial_input
     while True:
         response = agent.process_input(current_input)
         if response is None:
-            print("[ERROR] Product designer failed to respond.")
+            print(f"[{agent.key.upper()} ERROR] Failed to respond.")
             return None
-        print(f"Product Designer: {response}")
-        if "<rinf>" not in response:
+        print(f"{agent.key.replace('_', ' ').title()}: {response}")
+        if not agent.needs_more_info(response):
             return response
-        # Extract the prompt from <rinf>prompt</rinf>
-        match = re.search(r"<rinf>(.*?)</rinf>", response)
-        if match:
-            prompt = match.group(1)
-            print(f"Product Designer asks: {prompt}")
+        prompt = agent.extract_rinf_prompt(response)
+        if prompt:
+            print(f"{agent.key.replace('_', ' ').title()} asks: {prompt}")
             user_response = input("You: ").strip()
+            if user_response.lower() == "exit":
+                print(f"Exiting {agent.key} phase.")
+                return None
             current_input = user_response
         else:
-            print("[ERROR] Invalid <rinf> tag format in product designer's response.")
+            print(f"[{agent.key.upper()} ERROR] Invalid <rinf> format.")
             return None
 
-def main(provider="ollama", mode="product_software"):
+def chain_agents(agent_list, initial_input):
+    """Chain agents, passing each response to the next."""
+    current_input = initial_input
+    for agent in agent_list:
+        response = process_agent_interaction(agent, current_input)
+        if response is None:
+            return None
+        current_input = response
+    return current_input
+
+def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]):
     print("Please describe what you want to build:")
     user_initial_prompt = input().strip()
 
@@ -43,100 +57,42 @@ def main(provider="ollama", mode="product_software"):
     sandbox_dir = create_sandbox()
     print(f"[INFO] Using sandbox directory: {sandbox_dir}")
 
-    select_mode(user_initial_prompt, sandbox_dir, mode)
-
-def select_mode(user_initial_prompt, sandbox_dir, mode):
-    if mode == "product_software":
-
-        # Create agents
-        product_designer = Agent("product_designer", provider=provider, sandbox_dir=sandbox_dir)
-        software_engineer = Agent("software_engineer", provider=provider, sandbox_dir=sandbox_dir)
-
-        # Interact with product designer until design is final (no <rinf>)
-        final_design = interact_with_product_designer(product_designer, user_initial_prompt)
-        if final_design is None:
+    # Instantiate agents based on keys
+    agents = []
+    for key in agent_keys:
+        agent_class = AGENT_CLASSES.get(key)
+        if not agent_class:
+            print(f"[ERROR] Unknown agent key: {key}")
             return
+        agents.append(agent_class(provider=provider, sandbox_dir=sandbox_dir))
 
-        print("\nFinal design ready. Passing to software engineer...\n")
+    # Chain agents with initial prompt
+    final_output = chain_agents(agents, user_initial_prompt)
+    if final_output is None:
+        return
 
-        # Pass the final design to the software engineer
-        software_engineer.process_input(final_design)
-
-        print("\nSoftware Engineer is now online. Type 'exit' to quit.\n")
-
-        # Interaction loop with software engineer
-        while True:
-            try:
-                user_input = input("You: ").strip()
-                if user_input.lower() == "exit":
-                    print("Ending chat. Goodbye!")
-                    break
-                response = software_engineer.process_input(user_input)
-                if response:
-                    print(f"Software Engineer: {response}")
-                else:
-                    print("[ERROR] Software engineer failed to respond.")
-            except EOFError:
-                print("\n[ERROR] Input interrupted. Exiting gracefully.")
+    # Interactive loop with the last agent
+    last_agent = agents[-1]
+    print(f"\n{last_agent.key.replace('_', ' ').title()} is now online. Type 'exit' to quit.\n")
+    while True:
+        try:
+            user_input = input("You: ").strip()
+            if user_input.lower() == "exit":
+                print("Ending chat. Goodbye!")
                 break
-            except KeyboardInterrupt:
-                print("\nEnding chat. Goodbye!")
-                break
-            except Exception as e:
-                print(f"[ERROR] An unexpected error occurred: {e}")
+            response = process_agent_interaction(last_agent, user_input)
+            if response is None:
                 continue
-    elif mode == "software":
-
-        messages = [
-            {"role": "system", "content": PROMPTS['software_engineer']},
-            {"role": "user", "content": user_initial_prompt}
-        ]
-
-        print("Connecting to agent...")
-        chat_data = send_agent_message(messages, provider=provider)
-        if chat_data is None:
-            print("[ERROR] Failed to start chat with the agent.")
-            return
-
-        assistant_message = chat_data["choices"][0]["message"]
-        messages.append(assistant_message)
-        print(f"Agent: {assistant_message['content']}")
-        execution_results = process_agent_commands(assistant_message, sandbox_dir)
-        if execution_results:
-            execution_summary = "Execution results:\n" + "\n".join(execution_results)
-            messages.append({"role": "system", "content": execution_summary})
-
-        print("\nAgent is now online. Type 'exit' to quit.\n")
-
-        while True:
-            try:
-                user_input = input("You: ").strip()
-                if user_input.lower() == "exit":
-                    print("Ending chat. Goodbye!")
-                    break
-
-                messages.append({"role": "user", "content": user_input})
-                chat_data = send_agent_message(messages, provider=provider)
-                if chat_data:
-                    assistant_message = chat_data["choices"][0]["message"]
-                    messages.append(assistant_message)
-                    print(f"Agent: {assistant_message['content']}")
-                    execution_results = process_agent_commands(assistant_message, sandbox_dir)
-                    if execution_results:
-                        execution_summary = "Execution results:\n" + "\n".join(execution_results)
-                        messages.append({"role": "system", "content": execution_summary})
-                else:
-                    print("[ERROR] Failed to get response from agent.")
-            except EOFError:
-                print("\n[ERROR] Input interrupted. Exiting gracefully.")
-                break
-            except KeyboardInterrupt:
-                print("\nEnding chat. Goodbye!")
-                break
-            except Exception as e:
-                print(f"[ERROR] An unexpected error occurred: {e}")
-                continue
+        except EOFError:
+            print("\n[ERROR] Input interrupted. Exiting gracefully.")
+            break
+        except KeyboardInterrupt:
+            print("\nEnding chat. Goodbye!")
+            break
+        except Exception as e:
+            print(f"[ERROR] An unexpected error occurred: {e}")
+            continue
 
 if __name__ == "__main__":
     provider = "openai"  # or "ollama"
-    main(provider=provider, mode="product_software")
+    main(provider=provider, agent_keys=["product_designer", "software_engineer"])
