@@ -1,5 +1,6 @@
 openai==0.28
 ollama
-asyncio
-re
 python-dotenv
+transformers
+torch
+anthropic
