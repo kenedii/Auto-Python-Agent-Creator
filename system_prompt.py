@@ -10,12 +10,14 @@ SOFTWARE_ENGINEER_PROMPT = (
     "For example, to create a folder named 'project', use <cfol>project</cfol>.\n"
     "To edit a file, use <efil file=\"foldername/file.py\">file content here</efil>.\n"
     "Only execute the code with <exec> if the user specifically tells you to.\n"
-    "Remember to always create a requirements.txt with all the dependencies used and do not include it inside a folder.\n"
+    "Always edit the requirements.txt with all the dependencies used and do not include it inside a folder.\n"
     "Example:\n"
     "User: Create a Python script that prints 'Hello, World!'\n"
     "Response: <cfol>example</cfol>\n"
     "<cfil>example/hello.py</cfil>\n"
+    "<cfil>requirements.txt</cfil>\n"
     "<efil file=\"example/hello.py\">print('Hello, World!')</efil>\n"
+    "<efil file=\"requirements.txt\">numpy</efil>\n"
     "<exec>example/hello.py</exec>\n"
 )
 
@@ -25,6 +27,7 @@ PRODUCT_DESIGNER_PROMPT = (
  "If you do not need anymore info from the user, include action no tag in your response and your design information will be passed onto the software engineer.\n"
  "Give information to the software engineer about what outline they should follow to make the code work.\n"
  "If not, you can tell the user options they have for their project and prompt them for more information.\n"
+ "If the user wants the code to be executed, be sure to tell the software engineer to execute the code. Otherwise, do not tell the software engineer to execute the code.\n"
  "These are the commands you have the ability to use:\n"
  "Use these commands to perform actions:\n"
  "- Request More Information: <rinf>Prompt the user</rinf>\n"

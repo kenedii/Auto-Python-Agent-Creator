@@ -71,8 +71,24 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
     if final_output is None:
         return
 
-    # Start interactive post-development session with the last agent
+    # Retry mechanism to fix execution errors
     last_agent = agents[-1]
+    max_retries = 3
+    retry_count = 0
+    while retry_count < max_retries:
+        last_message = last_agent.messages[-1]
+        if last_message["role"] == "system" and "error" in last_message["content"].lower():
+            fix_prompt = f"The execution failed with the following error:\n{last_message['content']}\nPlease fix the issue and ensure the code runs successfully."
+            response = process_agent_interaction(last_agent, fix_prompt)
+            if response is None:
+                break
+            retry_count += 1
+        else:
+            break
+    if retry_count == max_retries:
+        print("[ERROR] Maximum retries reached. Entering interactive mode for manual intervention.")
+
+    # Start interactive post-development session with the last agent
     print(f"\n{last_agent.key.replace('_', ' ').title()} has completed the initial development.")
     print("You can now request additional features or modifications.")
     print("The agent may ask for more information if needed.\n")
@@ -97,6 +113,6 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
             break
 
 if __name__ == "__main__":
-    provider = "openai"  # or "ollama" "anthropic" "huggingface"
+    provider = "openai"  # or "ollama", "anthropic", "huggingface"
     # Run the main function with the specified provider and agent keys
-    main(provider=provider, agent_keys=["product_designer", "software_engineer"])
+    main(provider=provider, agent_keys=["software_engineer"])

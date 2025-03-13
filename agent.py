@@ -8,12 +8,17 @@ import anthropic
 load_dotenv("key.env")
 
 # Configuration for each provider
+# Ollama
 OLLAMA_MODEL_NAME = "deepseek-r1:1.5b"
 OLLAMA_API_URL = "http://localhost:11434/v1/chat/completions"
+# OpenAI
 OPENAI_MODEL_NAME = "gpt-3.5-turbo"
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Anthropic
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_MODEL_NAME = "claude-3-opus-20240229"
+# HuggingFace
 HF_DEFAULT_MODEL = "Qwen/Qwen-1_8B-Chat"  # Default low-parameter Hugging Face model
 
 # Global variables for Hugging Face model and tokenizer
@@ -101,7 +106,7 @@ def _send_anthropic_message(messages):
         system_message = next((m["content"] for m in messages if m["role"] == "system"), "")
         user_messages = [m for m in messages if m["role"] != "system"]
         response = anthropic_client.messages.create(
-            model="claude-3-opus-20240229",  # Adjust model as needed
+            model=ANTHROPIC_MODEL_NAME,  # Adjust model as needed
             messages=user_messages,
             system=system_message,
             max_tokens=100
