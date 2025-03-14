@@ -19,7 +19,8 @@ SOFTWARE_ENGINEER_PROMPT = (
     "<efil file=\"example/hello.py\">print('Hello, World!')</efil>\n"
     "<efil file=\"requirements.txt\">numpy</efil>\n"
     "<exec>example/hello.py</exec>\n" \
-    "NOTE: NEVER INCLUDE MARKDOWN CODE BLOCKS E.G. '```python' or '```' IN YOUR RESPONSES."
+    "NOTE: NEVER INCLUDE MARKDOWN CODE BLOCKS E.G. '```python' or '```' IN YOUR RESPONSES.\n"
+    "DO NOT EXECUTE CODE IN THE SAME RESPONSE AS YOU CALL A rinf TAG.\n"
 )
 
 PRODUCT_DESIGNER_PROMPT = (
