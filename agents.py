@@ -1,4 +1,3 @@
-# agents.py
 import re
 from system_prompt import PROMPTS
 from agent import send_agent_message
@@ -12,16 +11,16 @@ class Agent:
         self.sandbox_dir = sandbox_dir
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
-    def process_input(self, input_text):
-        """Process input and return the response, handling commands."""
+    async def process_input(self, input_text):
+        """Process input and return the response, handling commands asynchronously."""
         self.messages.append({"role": "user", "content": input_text})
-        chat_data = send_agent_message(self.messages, provider=self.provider)
+        chat_data = send_agent_message(self.messages, provider=self.provider)  # Assumes sync for now
         if chat_data is None:
             print(f"[{self.key.upper()} ERROR] Failed to get response.")
             return None
         assistant_message = chat_data["choices"][0]["message"]
         self.messages.append(assistant_message)
-        execution_results = process_agent_commands(assistant_message, self.sandbox_dir)
+        execution_results = await process_agent_commands(assistant_message, self.sandbox_dir)
         if execution_results:
             execution_summary = "Execution results:\n" + "\n".join(execution_results)
             self.messages.append({"role": "system", "content": execution_summary})
@@ -40,16 +39,14 @@ class ProductDesignerAgent(Agent):
     def __init__(self, provider="ollama", sandbox_dir=None):
         super().__init__("product_designer", provider, sandbox_dir)
 
-    def process_input(self, input_text):
+    async def process_input(self, input_text):
         """Override to handle product design-specific logic."""
-        response = super().process_input(input_text)
-        return response
+        return await super().process_input(input_text)
 
 class SoftwareEngineerAgent(Agent):
     def __init__(self, provider="ollama", sandbox_dir=None):
         super().__init__("software_engineer", provider, sandbox_dir)
 
-    def process_input(self, input_text):
+    async def process_input(self, input_text):
         """Override to handle software engineering-specific logic."""
-        response = super().process_input(input_text)
-        return response
+        return await super().process_input(input_text)

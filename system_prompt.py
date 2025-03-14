@@ -18,7 +18,8 @@ SOFTWARE_ENGINEER_PROMPT = (
     "<cfil>requirements.txt</cfil>\n"
     "<efil file=\"example/hello.py\">print('Hello, World!')</efil>\n"
     "<efil file=\"requirements.txt\">numpy</efil>\n"
-    "<exec>example/hello.py</exec>\n"
+    "<exec>example/hello.py</exec>\n" \
+    "NOTE: NEVER INCLUDE MARKDOWN CODE BLOCKS E.G. '```python' or '```' IN YOUR RESPONSES."
 )
 
 PRODUCT_DESIGNER_PROMPT = (

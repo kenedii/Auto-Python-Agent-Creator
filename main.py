@@ -1,6 +1,5 @@
-# main.py
 import os
-import re
+import asyncio
 from agents import ProductDesignerAgent, SoftwareEngineerAgent
 from file_manager import create_sandbox
 
@@ -13,11 +12,11 @@ AGENT_CLASSES = {
 # Force Ollama to use CPU mode if chosen (optional)
 os.environ["OLLAMA_USE_GPU"] = "0"
 
-def process_agent_interaction(agent, initial_input):
+async def process_agent_interaction(agent, initial_input):
     """Process interaction with an agent, handling <rinf> if present."""
     current_input = initial_input
     while True:
-        response = agent.process_input(current_input)
+        response = await agent.process_input(current_input)
         if response is None:
             print(f"[{agent.key.upper()} ERROR] Failed to respond.")
             return None
@@ -27,7 +26,7 @@ def process_agent_interaction(agent, initial_input):
         prompt = agent.extract_rinf_prompt(response)
         if prompt:
             print(f"{agent.key.replace('_', ' ').title()} asks: {prompt}")
-            user_response = input("You: ").strip()
+            user_response = input("You: ").strip()  # Synchronous input; see note
             if user_response.lower() == "exit":
                 print(f"Exiting {agent.key} phase.")
                 return None
@@ -36,25 +35,25 @@ def process_agent_interaction(agent, initial_input):
             print(f"[{agent.key.upper()} ERROR] Invalid <rinf> format.")
             return None
 
-def chain_agents(agent_list, initial_input):
+async def chain_agents(agent_list, initial_input):
     """Chain agents, passing each response to the next."""
     current_input = initial_input
     for agent in agent_list:
-        response = process_agent_interaction(agent, current_input)
+        response = await process_agent_interaction(agent, current_input)
         if response is None:
             return None
         current_input = response
     return current_input
 
-def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]):
+async def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]):
     print("Please describe what you want to build:")
-    user_initial_prompt = input().strip()
+    user_initial_prompt = input().strip()  # Synchronous input
 
     if not user_initial_prompt:
         print("[ERROR] You must enter a project description.")
         return
 
-    sandbox_dir = create_sandbox()
+    sandbox_dir = await create_sandbox()
     print(f"[INFO] Using sandbox directory: {sandbox_dir}")
 
     # Instantiate agents based on keys
@@ -67,7 +66,7 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
         agents.append(agent_class(provider=provider, sandbox_dir=sandbox_dir))
 
     # Chain agents with initial prompt
-    final_output = chain_agents(agents, user_initial_prompt)
+    final_output = await chain_agents(agents, user_initial_prompt)
     if final_output is None:
         return
 
@@ -79,7 +78,7 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
         last_message = last_agent.messages[-1]
         if last_message["role"] == "system" and "error" in last_message["content"].lower():
             fix_prompt = f"The execution failed with the following error:\n{last_message['content']}\nPlease fix the issue and ensure the code runs successfully."
-            response = process_agent_interaction(last_agent, fix_prompt)
+            response = await process_agent_interaction(last_agent, fix_prompt)
             if response is None:
                 break
             retry_count += 1
@@ -95,13 +94,13 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
 
     while True:
         # Prompt user for a request
-        user_input = input("Your request (or 'exit' to quit): ").strip()
+        user_input = input("Your request (or 'exit' to quit): ").strip()  # Synchronous input
         if user_input.lower() == "exit":
             print("Ending chat. Goodbye!")
             break
 
         # Process the request, which may involve multiple interactions if <rinf> is used
-        response = process_agent_interaction(last_agent, user_input)
+        response = await process_agent_interaction(last_agent, user_input)
         if response is None:
             print("\nRequest aborted or failed. You can try again.")
             continue
@@ -115,4 +114,4 @@ def main(provider="ollama", agent_keys=["product_designer", "software_engineer"]
 if __name__ == "__main__":
     provider = "openai"  # or "ollama", "anthropic", "huggingface"
     # Run the main function with the specified provider and agent keys
-    main(provider=provider, agent_keys=["software_engineer"])
+    asyncio.run(main(provider=provider, agent_keys=["software_engineer"]))
