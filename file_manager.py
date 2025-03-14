@@ -57,14 +57,30 @@ async def process_agent_commands(assistant_message, sandbox_dir):
                 print(f"[OUTPUT]\n{output}")
             if error:
                 print(f"[ERROR]\n{error}")
-            result_str = f"Execution of {file_path}:"
-            if output:
-                result_str += f" output: {output}"
+            
+            # Build execution summary
             if error:
-                result_str += f" error: {error}"
+                # Only include error, with a snippet of output for context
+                output_lines = output.splitlines()
+                snippet = "\n".join(output_lines[-10:]) if output_lines else ""
+                result_str = f"Execution of {file_path} failed with error: {error}"
+                if snippet:
+                    result_str += f"\nLast 10 lines of output:\n{snippet}"
+            else:
+                # Success case: include a snippet of output
+                output_lines = output.splitlines()
+                snippet = "\n".join(output_lines[-10:]) if output_lines else ""
+                result_str = f"Execution of {file_path} succeeded. Last 10 lines of output:\n{snippet}"
+            
+            # Enforce a character limit
+            MAX_SUMMARY_CHARS = 5000
+            if len(result_str) > MAX_SUMMARY_CHARS:
+                result_str = result_str[:MAX_SUMMARY_CHARS] + "\n... (truncated)"
+            
             execution_results.append(result_str)
         except Exception as e:
             print(f"[ERROR] Could not execute code: {e}")
+            execution_results.append(f"Execution of {file_path} failed: {e}")
 
     for match in re.finditer(r"<rinf>(.*?)</rinf>", agent_message):
         prompt = match.group(1).strip()

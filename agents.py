@@ -4,17 +4,18 @@ from agent import send_agent_message
 from file_manager import process_agent_commands
 
 class Agent:
-    def __init__(self, key, provider="ollama", sandbox_dir=None):
+    def __init__(self, key, provider="ollama", sandbox_dir=None, max_tokens=16000):
         self.key = key
         self.system_prompt = PROMPTS.get(key, "Default agent prompt")
         self.provider = provider
         self.sandbox_dir = sandbox_dir
+        self.max_tokens = max_tokens
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
     async def process_input(self, input_text):
         """Process input and return the response, handling commands asynchronously."""
         self.messages.append({"role": "user", "content": input_text})
-        chat_data = send_agent_message(self.messages, provider=self.provider)  # Assumes sync for now
+        chat_data = send_agent_message(self.messages, provider=self.provider, max_tokens=self.max_tokens)
         if chat_data is None:
             print(f"[{self.key.upper()} ERROR] Failed to get response.")
             return None
@@ -36,16 +37,16 @@ class Agent:
         return match.group(1) if match else None
 
 class ProductDesignerAgent(Agent):
-    def __init__(self, provider="ollama", sandbox_dir=None):
-        super().__init__("product_designer", provider, sandbox_dir)
+    def __init__(self, provider="ollama", sandbox_dir=None, max_tokens=16000):
+        super().__init__("product_designer", provider, sandbox_dir, max_tokens)
 
     async def process_input(self, input_text):
         """Override to handle product design-specific logic."""
         return await super().process_input(input_text)
 
 class SoftwareEngineerAgent(Agent):
-    def __init__(self, provider="ollama", sandbox_dir=None):
-        super().__init__("software_engineer", provider, sandbox_dir)
+    def __init__(self, provider="ollama", sandbox_dir=None, max_tokens=16000):
+        super().__init__("software_engineer", provider, sandbox_dir, max_tokens)
 
     async def process_input(self, input_text):
         """Override to handle software engineering-specific logic."""
