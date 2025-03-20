@@ -26,7 +26,7 @@ async def process_agent_interaction(agent, initial_input):
         prompt = agent.extract_rinf_prompt(response)
         if prompt:
             print(f"{agent.key.replace('_', ' ').title()} asks: {prompt}")
-            user_response = input("You: ").strip()  # Synchronous input; see note
+            user_response = input("You: ").strip()  # Synchronous input
             if user_response.lower() == "exit":
                 print(f"Exiting {agent.key} phase.")
                 return None
@@ -70,7 +70,7 @@ async def main(provider="ollama", agent_keys=["product_designer", "software_engi
     if final_output is None:
         return
 
-    # Retry mechanism to fix execution errors
+    # Retry mechanism to fix execution errors after initial development
     last_agent = agents[-1]
     max_retries = 3
     retry_count = 0
@@ -86,6 +86,8 @@ async def main(provider="ollama", agent_keys=["product_designer", "software_engi
             break
     if retry_count == max_retries:
         print("[ERROR] Maximum retries reached. Entering interactive mode for manual intervention.")
+        # Reset message history for fresh start in interactive mode
+        last_agent.messages = [{"role": "system", "content": last_agent.system_prompt}]
 
     # Start interactive post-development session with the last agent
     print(f"\n{last_agent.key.replace('_', ' ').title()} has completed the initial development.")
@@ -105,7 +107,24 @@ async def main(provider="ollama", agent_keys=["product_designer", "software_engi
             print("\nRequest aborted or failed. You can try again.")
             continue
 
-        # After a complete response, ask if the user wants more
+        # Check for execution errors and attempt to fix them
+        max_retries = 3
+        retry_count = 0
+        while retry_count < max_retries:
+            last_message = last_agent.messages[-1]
+            if last_message["role"] == "system" and "error" in last_message["content"].lower():
+                fix_prompt = f"The execution failed with the following error:\n{last_message['content']}\nPlease fix the issue and ensure the code runs successfully."
+                response = await process_agent_interaction(last_agent, fix_prompt)
+                if response is None:
+                    print("\nError fixing aborted or failed.")
+                    break
+                retry_count += 1
+            else:
+                break
+        if retry_count == max_retries:
+            print("[ERROR] Maximum retries reached. Please check the code manually or try a different request.")
+
+        # After a complete response or error resolution, ask if the user wants more
         continue_chat = input("Did you want anything else? (yes/no): ").strip().lower()
         if continue_chat != "yes":
             print("Ending chat. Goodbye!")
@@ -114,4 +133,4 @@ async def main(provider="ollama", agent_keys=["product_designer", "software_engi
 if __name__ == "__main__":
     provider = "openai"  # or "ollama", "anthropic", "huggingface"
     # Run the main function with the specified provider and agent keys
-    asyncio.run(main(provider=provider, agent_keys=["software_engineer"]))
+    asyncio.run(main(provider=provider, agent_keys=["product_designer", "software_engineer"]))
