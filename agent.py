@@ -20,6 +20,10 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_MODEL_NAME = "claude-3-opus-20240229"
 # HuggingFace
 HF_DEFAULT_MODEL = "Qwen/Qwen-1_8B-Chat"
+# DeepSeek
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL_NAME = "deepseek-coder"  # Example model name; adjust based on DeepSeek's docs
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"  # Example URL; verify with DeepSeek
 
 # Global variables for Hugging Face model and tokenizer
 hf_model = None
@@ -38,6 +42,8 @@ def send_agent_message(messages, provider="ollama", max_tokens=16000):
         return _send_huggingface_message(messages)
     elif provider.lower() == "anthropic":
         return _send_anthropic_message(messages)
+    elif provider.lower() == "deepseek":
+        return _send_deepseek_message(messages)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -128,4 +134,34 @@ def _send_anthropic_message(messages):
         return {"choices": [{"message": {"content": response.content[0].text}}]}
     except Exception as err:
         print(f"[ERROR] Anthropic API error: {err}")
+        return None
+
+def _send_deepseek_message(messages):
+    """Send messages to the DeepSeek API."""
+    api_key = DEEPSEEK_API_KEY
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY not set in key.env")
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messages": messages,
+        "model": DEEPSEEK_MODEL_NAME
+    }
+    
+    try:
+        response = requests.post(
+            DEEPSEEK_API_URL,
+            json=data,
+            headers=headers
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        print(f"[ERROR] DeepSeek API HTTP Error: {response.text}")
+        return None
+    except Exception as err:
+        print(f"[ERROR] Unexpected error with DeepSeek API: {err}")
         return None
