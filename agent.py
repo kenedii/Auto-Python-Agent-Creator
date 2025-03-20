@@ -22,8 +22,8 @@ ANTHROPIC_MODEL_NAME = "claude-3-opus-20240229"
 HF_DEFAULT_MODEL = "Qwen/Qwen-1_8B-Chat"
 # DeepSeek
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DEEPSEEK_MODEL_NAME = "deepseek-coder"  # Example model name; adjust based on DeepSeek's docs
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"  # Example URL; verify with DeepSeek
+DEEPSEEK_MODEL_NAME = "deepseek-chat"  
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1" 
 
 # Global variables for Hugging Face model and tokenizer
 hf_model = None
