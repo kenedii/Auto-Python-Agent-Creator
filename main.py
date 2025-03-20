@@ -131,6 +131,6 @@ async def main(provider="ollama", agent_keys=["product_designer", "software_engi
             break
 
 if __name__ == "__main__":
-    provider = "openai"  # or "ollama", "anthropic", "huggingface"
+    provider = "openai"  # or "ollama", "anthropic", "huggingface", "deepseek"
     # Run the main function with the specified provider and agent keys
     asyncio.run(main(provider=provider, agent_keys=["product_designer", "software_engineer"]))
