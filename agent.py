@@ -23,7 +23,7 @@ HF_DEFAULT_MODEL = "Qwen/Qwen-1_8B-Chat"
 # DeepSeek
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_MODEL_NAME = "deepseek-chat"  
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1" 
+DEEPSEEK_API_URL = "https://api.deepseek.com"
 
 # Global variables for Hugging Face model and tokenizer
 hf_model = None
@@ -137,31 +137,19 @@ def _send_anthropic_message(messages):
         return None
 
 def _send_deepseek_message(messages):
-    """Send messages to the DeepSeek API."""
-    api_key = DEEPSEEK_API_KEY
-    if not api_key:
+    """Send messages to the DeepSeek API using OpenAI SDK."""
+    from openai import OpenAI
+    if not DEEPSEEK_API_KEY:
         raise ValueError("DEEPSEEK_API_KEY not set in key.env")
     
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "messages": messages,
-        "model": DEEPSEEK_MODEL_NAME
-    }
-    
+    client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_API_URL)
     try:
-        response = requests.post(
-            DEEPSEEK_API_URL,
-            json=data,
-            headers=headers
+        response = client.chat.completions.create(
+            model=DEEPSEEK_MODEL_NAME,
+            messages=messages,
+            stream=False
         )
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as err:
-        print(f"[ERROR] DeepSeek API HTTP Error: {response.text}")
-        return None
+        return response
     except Exception as err:
-        print(f"[ERROR] Unexpected error with DeepSeek API: {err}")
+        print(f"[ERROR] DeepSeek API error: {err}")
         return None
